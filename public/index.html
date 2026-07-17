@@ -3,76 +3,105 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>r-localhost | Command Center</title>
+  <title>r-localhost | Master OS</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
       darkMode: 'class',
-      theme: {
-        extend: {
-          colors: {
-            gray: { 900: '#121214', 800: '#1c1c1f', 700: '#27272a' }
-          }
-        }
-      }
+      theme: { extend: { colors: { gray: { 900: '#121214', 800: '#1c1c1f', 700: '#27272a' } } } }
     }
   </script>
 </head>
 <body class="bg-black text-gray-100 h-screen w-screen overflow-hidden flex flex-col font-sans selection:bg-emerald-500/30">
   
-  <!-- Header -->
-  <header class="px-6 py-8 border-b border-gray-800 bg-gray-900/50 backdrop-blur-md">
-    <div class="flex justify-between items-center">
-      <div>
-        <h1 class="text-2xl font-bold tracking-tight">r-localhost</h1>
-        <p class="text-sm text-gray-400 mt-1">Master Daemon <span id="health-indicator" class="text-emerald-500 font-medium tracking-wide text-xs ml-2 uppercase animate-pulse">● Online</span></p>
-      </div>
+  <!-- Dynamic Header -->
+  <header class="px-6 py-6 border-b border-gray-800 bg-gray-900/50 backdrop-blur-md flex items-center gap-4">
+    <button id="btn-back" class="hidden text-gray-400 hover:text-white transition-colors active:scale-95">
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    </button>
+    <div>
+      <h1 id="header-title" class="text-2xl font-bold tracking-tight">r-localhost</h1>
+      <p class="text-sm text-gray-400 mt-1">Master Daemon <span class="text-emerald-500 font-medium tracking-wide text-xs ml-2 uppercase animate-pulse">● Online</span></p>
     </div>
   </header>
 
-  <main class="flex-1 overflow-y-auto p-6 space-y-6">
+  <main class="flex-1 overflow-y-auto p-6 space-y-6 relative">
     
-    <!-- Minecraft Server Card -->
-    <div class="bg-gray-900 border border-gray-800 rounded-2xl p-5 shadow-lg">
-      <div class="flex justify-between items-center mb-6">
-        <h2 class="text-lg font-semibold text-gray-200">Bedrock Engine</h2>
-        <span id="mc-status-badge" class="px-3 py-1 rounded-full text-xs font-medium bg-red-500/10 text-red-500 border border-red-500/20">
-          STOPPED
-        </span>
-      </div>
+    <!-- VIEW 1: HOME MENU -->
+    <div id="view-home" class="space-y-4 transition-all duration-300">
       
-      <div class="flex gap-3">
-        <button id="btn-mc-start" class="flex-1 bg-gray-100 text-black font-semibold py-3 rounded-xl active:scale-95 transition-transform">
-          Ignite Server
-        </button>
-        <button id="btn-mc-stop" class="flex-1 bg-gray-800 text-gray-300 font-semibold py-3 rounded-xl active:scale-95 transition-transform border border-gray-700">
-          Kill Process
-        </button>
+      <!-- Yourhost App Button -->
+      <div onclick="switchView('yourhost')" class="bg-gray-900 border border-gray-800 rounded-2xl p-5 shadow-lg active:scale-95 transition-transform cursor-pointer flex justify-between items-center">
+        <div class="flex items-center gap-4">
+          <div class="h-12 w-12 bg-blue-500/20 text-blue-400 rounded-xl flex items-center justify-center border border-blue-500/30">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M2 12h20M4.93 4.93l14.14 14.14M4.93 19.07L19.07 4.93"/></svg>
+          </div>
+          <div>
+            <h2 class="text-lg font-semibold text-gray-200">Yourhost</h2>
+            <p class="text-sm text-gray-400">Bedrock Server & DNS</p>
+          </div>
+        </div>
+        <svg class="text-gray-600" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+      </div>
+
+      <!-- RCloud App Button -->
+      <div onclick="switchView('rcloud')" class="bg-gray-900 border border-gray-800 rounded-2xl p-5 shadow-lg active:scale-95 transition-transform cursor-pointer flex justify-between items-center">
+        <div class="flex items-center gap-4">
+          <div class="h-12 w-12 bg-purple-500/20 text-purple-400 rounded-xl flex items-center justify-center border border-purple-500/30">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          </div>
+          <div>
+            <h2 class="text-lg font-semibold text-gray-200">R-Cloud</h2>
+            <p class="text-sm text-gray-400">Personal Drive Storage</p>
+          </div>
+        </div>
+        <svg class="text-gray-600" xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+      </div>
+
+    </div>
+
+    <!-- VIEW 2: YOURHOST SETTINGS -->
+    <div id="view-yourhost" class="hidden space-y-6 transition-all duration-300">
+      <div class="bg-gray-900 border border-gray-800 rounded-2xl p-5 shadow-lg">
+        <div class="flex justify-between items-center mb-6">
+          <h2 class="text-lg font-semibold text-gray-200">Bedrock Engine</h2>
+          <span id="mc-status-badge" class="px-3 py-1 rounded-full text-xs font-medium bg-red-500/10 text-red-500 border border-red-500/20">STOPPED</span>
+        </div>
+        <div class="flex gap-3">
+          <button id="btn-mc-start" class="flex-1 bg-gray-100 text-black font-semibold py-3 rounded-xl active:scale-95 transition-transform">Ignite Server</button>
+          <button id="btn-mc-stop" class="flex-1 bg-gray-800 text-gray-300 font-semibold py-3 rounded-xl active:scale-95 transition-transform border border-gray-700">Kill</button>
+        </div>
+      </div>
+
+      <div class="bg-gray-900 border border-gray-800 rounded-2xl p-5 shadow-lg">
+        <div class="mb-6">
+          <h2 class="text-lg font-semibold text-gray-200">Cloudflare DNS</h2>
+          <p class="text-sm text-gray-400 mt-1">Bind dynamic IPv6</p>
+        </div>
+        <div class="space-y-4">
+          <input type="text" id="cf-domain" placeholder="Subdomain" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-colors">
+          <input type="text" id="cf-zone" placeholder="Zone ID" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-colors">
+          <input type="password" id="cf-token" placeholder="API Token" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-colors">
+          <div class="flex gap-3 mt-2">
+            <button id="btn-dns-sync" class="flex-1 bg-blue-600/20 text-blue-400 border border-blue-600/30 font-semibold py-3 rounded-xl active:scale-95 transition-all">Manual Sync</button>
+            <button id="btn-dns-auto" class="flex-1 bg-gray-800 text-gray-300 border border-gray-700 font-semibold py-3 rounded-xl active:scale-95 transition-all">Auto: OFF</button>
+          </div>
+          <p id="dns-log" class="text-xs text-gray-500 font-mono text-center mt-2 h-4"></p>
+        </div>
       </div>
     </div>
 
-    <!-- DNS Routing Card -->
-    <div class="bg-gray-900 border border-gray-800 rounded-2xl p-5 shadow-lg">
-      <div class="mb-6">
-        <h2 class="text-lg font-semibold text-gray-200">Cloudflare DNS</h2>
-        <p class="text-sm text-gray-400 mt-1">Bind dynamic IPv6 to domain</p>
-      </div>
-      
-      <div class="space-y-4">
-        <!-- Inputs for your Cloudflare details -->
-        <input type="text" id="cf-domain" placeholder="Subdomain (e.g., mc.rworks.com)" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-colors">
-        <input type="text" id="cf-zone" placeholder="Zone ID" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-colors">
-        <input type="password" id="cf-token" placeholder="API Token" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-colors">
-        
-        <div class="flex gap-3 mt-2">
-          <button id="btn-dns-sync" class="flex-1 bg-blue-600/20 text-blue-400 border border-blue-600/30 font-semibold py-3 rounded-xl active:scale-95 transition-all">
-            Manual Sync
-          </button>
-          <button id="btn-dns-auto" class="flex-1 bg-gray-800 text-gray-300 border border-gray-700 font-semibold py-3 rounded-xl active:scale-95 transition-all">
-            Auto: OFF
-          </button>
+    <!-- VIEW 3: RCLOUD SETTINGS -->
+    <div id="view-rcloud" class="hidden space-y-6 transition-all duration-300">
+      <div class="bg-gray-900 border border-gray-800 rounded-2xl p-5 shadow-lg">
+        <div class="flex justify-between items-center mb-6">
+          <h2 class="text-lg font-semibold text-gray-200">Personal Drive Core</h2>
+          <span id="rcloud-status-badge" class="px-3 py-1 rounded-full text-xs font-medium bg-red-500/10 text-red-500 border border-red-500/20">STOPPED</span>
         </div>
-        <p id="dns-log" class="text-xs text-gray-500 font-mono text-center mt-2 h-4"></p>
+        <div class="flex gap-3">
+          <button id="btn-rcloud-start" class="flex-1 bg-gray-100 text-black font-semibold py-3 rounded-xl active:scale-95 transition-transform">Ignite Drive</button>
+          <button id="btn-rcloud-stop" class="flex-1 bg-gray-800 text-gray-300 font-semibold py-3 rounded-xl active:scale-95 transition-transform border border-gray-700">Kill</button>
+        </div>
       </div>
     </div>
 

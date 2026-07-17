@@ -1,33 +1,32 @@
 import express from 'express';
-import cors from 'cors';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-// Import Feature Modules (Note the .js extension for NodeNext resolution)
-import dnsRoutes from './modules/dns/dns.routes.js';
+// Import modules
 import mcRoutes from './modules/server/mc.routes.js';
+import dnsRoutes from './modules/dns/dns.routes.js';
+import rcloudRoutes from './modules/rcloud/rcloud.routes.js';
+import { logger } from './shared/logger.js';
+
+// Resolve directory path for ES Modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
+const PORT = 4000;
 
-// Global Middlewares
-app.use(cors());
+// Middleware
 app.use(express.json());
 
-// Serve the compiled Tailwind/HTML UI dashboard
-app.use(express.static('public'));
+// Serve the frontend UI from the public folder
+app.use(express.static(path.join(__dirname, '../public')));
 
-// Core Infrastructure Health Check
-app.get('/api/health', (req, res) => {
-  res.json({ 
-    service: 'r-localhost',
-    status: 'operational', 
-    timestamp: new Date().toISOString() 
-  });
-});
-
-// Mount the modular APIs
-app.use('/api/dns', dnsRoutes);
+// Mount API Endpoints
 app.use('/api/server', mcRoutes);
+app.use('/api/dns', dnsRoutes);
+app.use('/api/rcloud', rcloudRoutes);
 
-// You can add the Layer 4 Tunnel routes (FRP) here later
-// app.use('/api/tunnels', tunnelRoutes);
-
-export default app;
+// Boot Daemon
+app.listen(PORT, () => {
+  logger.success(`r-localhost master hypervisor online on port ${PORT}`, 'SYSTEM');
+});
