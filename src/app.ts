@@ -1,24 +1,33 @@
 import express from 'express';
 import cors from 'cors';
 
+// Import Feature Modules (Note the .js extension for NodeNext resolution)
+import dnsRoutes from './modules/dns/dns.routes.js';
+import mcRoutes from './modules/server/mc.routes.js';
+
 const app = express();
 
-// Standard middlewares
+// Global Middlewares
 app.use(cors());
 app.use(express.json());
 
-// Serves the front-end dashboard UI
+// Serve the compiled Tailwind/HTML UI dashboard
 app.use(express.static('public'));
 
-// Base health status check
+// Core Infrastructure Health Check
 app.get('/api/health', (req, res) => {
   res.json({ 
+    service: 'r-localhost',
     status: 'operational', 
     timestamp: new Date().toISOString() 
   });
 });
 
-// TODO: Mount modular feature routes here
-// app.use('/api/dns', dnsRoutes);
+// Mount the modular APIs
+app.use('/api/dns', dnsRoutes);
+app.use('/api/server', mcRoutes);
+
+// You can add the Layer 4 Tunnel routes (FRP) here later
+// app.use('/api/tunnels', tunnelRoutes);
 
 export default app;
