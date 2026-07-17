@@ -5,9 +5,6 @@ import { logger } from '../../shared/logger.js';
 let mcProcess: ChildProcess | null = null;
 
 export const mcManager = {
-  /**
-   * Spawns the Minecraft Bedrock binary inside the Termux environment.
-   */
   start: (): boolean => {
     if (mcProcess) {
       logger.warn('Minecraft server is already running.', 'SERVER');
@@ -15,15 +12,15 @@ export const mcManager = {
     }
 
     try {
-      // UPDATE THIS PATH: Point it to exactly where your 'yourhost' bedrock binary lives
-      const serverDir = '/data/data/com.termux/files/home/yourhost/server'; 
+      logger.info('Engaging PRoot container via start-mc...', 'SERVER');
       
-      mcProcess = spawn('./bedrock_server', {
-        cwd: serverDir,
-        env: { ...process.env, LD_LIBRARY_PATH: '.' }
+      // Execute the global terminal command using the native shell
+      mcProcess = spawn('start-mc', [], {
+        shell: true, 
+        env: process.env // Inherit Termux environment variables
       });
 
-      logger.success('Minecraft Bedrock binary ignited.', 'SERVER');
+      logger.success('Minecraft Bedrock container ignited.', 'SERVER');
 
       // Pipe stdout
       mcProcess.stdout?.on('data', (data) => {
@@ -36,21 +33,21 @@ export const mcManager = {
         logger.error(data.toString().trim(), 'MC-CORE');
       });
 
-      // CATCH SPAWN ERRORS so the Express daemon doesn't crash
+      // Catch spawn errors (e.g., if start-mc is not found)
       mcProcess.on('error', (err) => {
-        logger.error(`Binary execution failed: ${err.message}`, 'SERVER');
+        logger.error(`Container execution failed: ${err.message}`, 'SERVER');
         mcProcess = null;
       });
 
       // Handle graceful exits
       mcProcess.on('close', (code) => {
-        logger.warn(`Minecraft server terminated with code ${code}`, 'SERVER');
+        logger.warn(`Minecraft container terminated with code ${code}`, 'SERVER');
         mcProcess = null;
       });
 
       return true;
     } catch (error) {
-      logger.error('Failed to spawn Bedrock binary setup', 'SERVER', error);
+      logger.error('Failed to spawn start-mc script', 'SERVER', error);
       mcProcess = null;
       return false;
     }
@@ -62,9 +59,10 @@ export const mcManager = {
       return false;
     }
 
+    // Kill the shell process (and hopefully its child proot process)
     mcProcess.kill('SIGINT');
     mcProcess = null;
-    logger.success('Minecraft server gracefully shut down.', 'SERVER');
+    logger.success('Minecraft container shut down signal sent.', 'SERVER');
     return true;
   },
 
