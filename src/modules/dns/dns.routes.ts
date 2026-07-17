@@ -5,51 +5,65 @@ import { logger } from '../../shared/logger.js';
 
 const router = Router();
 
-// In-memory state for the background daemon
 let syncInterval: NodeJS.Timeout | null = null;
+let autoConfig: { token: string, zoneId: string, subdomains: string[] } | null = null;
+let lastKnownIp: string | null = null;
 
-// POST /api/dns/sync - Forces an immediate DNS update
-router.post('/sync', async (req, res) => {
-  const { token, zoneId, subdomains } = req.body as { token: string, zoneId: string, subdomains: string[] };
-
-  if (!token || !zoneId || !subdomains) {
-    return res.status(400).json({ error: 'Missing Cloudflare credentials or subdomains payload.' });
-  }
-
+// Core Engine function
+async function executeDnsSync(token: string, zoneId: string, subdomains: string[]) {
   const currentIp = await getPublicIPv6();
-  if (!currentIp) return res.status(503).json({ error: 'No IPv6 connectivity detected.' });
+  if (!currentIp) throw new Error('No IPv6 connectivity detected.');
+  
+  // Skip update if the IP hasn't changed (saves Cloudflare API limits)
+  if (currentIp === lastKnownIp) return { ip: currentIp, updated: false };
 
   const config: CloudflareConfig = { token, zoneId };
-  const results = [];
-
   for (const sub of subdomains) {
     const recordId = await getRecordId(sub, config);
     if (recordId) {
       const success = await updateRecordId(sub, recordId, currentIp, config);
-      results.push({ subdomain: sub, success });
       if (success) logger.success(`Routed ${sub} -> ${currentIp}`, 'DNS');
-    } else {
-      results.push({ subdomain: sub, success: false, error: 'Record ID missing' });
     }
   }
+  lastKnownIp = currentIp;
+  return { ip: currentIp, updated: true };
+}
 
-  res.json({ ip: currentIp, results });
+// POST /api/dns/sync - Manual Sync
+router.post('/sync', async (req, res) => {
+  try {
+    const { token, zoneId, subdomains } = req.body;
+    if (!token || !zoneId || !subdomains) return res.status(400).json({ error: 'Missing credentials' });
+    
+    const result = await executeDnsSync(token, zoneId, subdomains);
+    res.json(result);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
-// POST /api/dns/auto - Toggles the 60-second background sync
+// POST /api/dns/auto - Toggle Background Daemon
 router.post('/auto', (req, res) => {
-  const { action } = req.body as { action: 'start' | 'stop' };
+  const { action, token, zoneId, subdomains } = req.body;
 
-  if (action === 'start' && !syncInterval) {
-    // In production, you'd pull credentials from a local SQLite DB or env vars here
-    logger.info('Auto-DNS daemon engaged.', 'DNS');
-    syncInterval = setInterval(() => logger.info('Executing background DNS sync...', 'DNS'), 60000);
+  if (action === 'start') {
+    if (!token || !zoneId) return res.status(400).json({ error: 'Credentials required for auto-loop' });
+    autoConfig = { token, zoneId, subdomains };
+    
+    if (!syncInterval) {
+      logger.info('Auto-DNS daemon engaged. Checking every 60s.', 'DNS');
+      syncInterval = setInterval(() => {
+        executeDnsSync(autoConfig!.token, autoConfig!.zoneId, autoConfig!.subdomains)
+          .catch(err => logger.error('Background sync failed', 'DNS', err));
+      }, 60000);
+    }
     return res.json({ status: 'running' });
   } 
   
-  if (action === 'stop' && syncInterval) {
-    clearInterval(syncInterval);
+  if (action === 'stop') {
+    if (syncInterval) clearInterval(syncInterval);
     syncInterval = null;
+    autoConfig = null;
     logger.warn('Auto-DNS daemon disengaged.', 'DNS');
     return res.json({ status: 'stopped' });
   }
