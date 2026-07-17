@@ -26,7 +26,5 @@ app.use('/api/server', mcRoutes);
 app.use('/api/dns', dnsRoutes);
 app.use('/api/rcloud', rcloudRoutes);
 
-// Boot Daemon
-app.listen(PORT, () => {
-  logger.success(`r-localhost master hypervisor online on port ${PORT}`, 'SYSTEM');
-});
+// Export the app so index.ts can boot it
+export default app;

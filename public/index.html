@@ -98,9 +98,16 @@
           <h2 class="text-lg font-semibold text-gray-200">Personal Drive Core</h2>
           <span id="rcloud-status-badge" class="px-3 py-1 rounded-full text-xs font-medium bg-red-500/10 text-red-500 border border-red-500/20">STOPPED</span>
         </div>
-        <div class="flex gap-3">
+        
+        <div class="flex gap-3 mb-4">
           <button id="btn-rcloud-start" class="flex-1 bg-gray-100 text-black font-semibold py-3 rounded-xl active:scale-95 transition-transform">Ignite Drive</button>
           <button id="btn-rcloud-stop" class="flex-1 bg-gray-800 text-gray-300 font-semibold py-3 rounded-xl active:scale-95 transition-transform border border-gray-700">Kill</button>
+        </div>
+
+        <!-- The WAN Link Container -->
+        <div id="rcloud-link-container" class="hidden pt-4 border-t border-gray-800 flex flex-col items-center justify-center">
+          <p class="text-xs text-gray-400 mb-1">Global WAN Link</p>
+          <a id="rcloud-public-url" href="#" target="_blank" class="text-emerald-400 font-mono text-sm hover:underline">Establishing tunnel...</a>
         </div>
       </div>
     </div>
