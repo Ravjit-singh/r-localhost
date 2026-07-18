@@ -21,7 +21,7 @@ app.use(express.json());
 // Serve the frontend UI from the public folder
 app.use(express.static(path.join(__dirname, '../public')));
 
-// Mount API Endpoints
+//API Endpoints
 app.use('/api/server', mcRoutes);
 app.use('/api/dns', dnsRoutes);
 app.use('/api/rcloud', rcloudRoutes);
