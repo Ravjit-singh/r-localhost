@@ -18,7 +18,7 @@ export const rcloudManager = {
     try {
       logger.info('Igniting RCloud Personal Drive...', 'RCLOUD');
       
-      // 1. Start the actual Drive backend
+      // 1. Start the actual RCloud backend
       rcloudProcess = spawn('npm', ['start'], {
         cwd: RCLOUD_DIR,
         shell: true
