@@ -7,7 +7,7 @@ import mcRoutes from './modules/server/mc.routes.js';
 import dnsRoutes from './modules/dns/dns.routes.js';
 import rcloudRoutes from './modules/rcloud/rcloud.routes.js';
 import { logger } from './shared/logger.js';
-
+import tunnelRoutes from './modules/tunnels/tunnel.routes.js';
 // Resolve directory path for ES Modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -25,6 +25,7 @@ app.use(express.static(path.join(__dirname, '../public')));
 app.use('/api/server', mcRoutes);
 app.use('/api/dns', dnsRoutes);
 app.use('/api/rcloud', rcloudRoutes);
+app.use('/api/tunnel', tunnelRoutes);
 
 // Export the app so index.ts can boot it
 export default app;
