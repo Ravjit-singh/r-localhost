@@ -1,31 +1,22 @@
 import express from 'express';
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-// Import modules
-import mcRoutes from './modules/server/mc.routes.js';
-import dnsRoutes from './modules/dns/dns.routes.js';
-import rcloudRoutes from './modules/rcloud/rcloud.routes.js';
-import { logger } from './shared/logger.js';
-import tunnelRoutes from './modules/tunnels/tunnel.routes.js';
-// Resolve directory path for ES Modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import { proxyManager } from './modules/tunnels/proxy.manager.js';
+// ... your other imports ...
 
 const app = express();
-const PORT = 4000;
 
-// Middleware
+// 1. MUST BE FIRST: The Proxy Interceptor
+app.use(proxyManager.interceptor);
+
+// 2. Standard Middleware
 app.use(express.json());
+app.use(express.static('public'));
 
-// Serve the frontend UI from the public folder
-app.use(express.static(path.join(__dirname, '../public')));
+// 3. Your API Routes
+// app.use('/api/dns', dnsRoutes);
+// app.use('/api/rcloud', rcloudRoutes);
+// ...
 
-//API Endpoints
-app.use('/api/server', mcRoutes);
-app.use('/api/dns', dnsRoutes);
-app.use('/api/rcloud', rcloudRoutes);
-app.use('/api/tunnel', tunnelRoutes);
-
-// Export the app so index.ts can boot it
-export default app;
+const PORT = process.env.PORT || 4000;
+app.listen(PORT, () => {
+  console.log(`\n[MASTER OS] Engine online on port ${PORT}`);
+});
