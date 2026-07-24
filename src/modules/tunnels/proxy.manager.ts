@@ -1,46 +1,63 @@
-import httpProxy from 'http-proxy';
 import { Request, Response, NextFunction } from 'express';
+import { createProxyMiddleware } from 'http-proxy-middleware';
 import { logger } from '../../shared/logger.js';
-import 'dotenv/config';
+import { exec } from 'child_process';
 
-// Initialize the ultra-lightweight proxy engine
-const proxy = httpProxy.createProxyServer({ ws: true }); 
 const MASTER_DOMAIN = process.env.MASTER_DOMAIN || 'ravjit.me';
+const TUNNEL_NAME = process.env.MASTER_TUNNEL_NAME;
 
-// This acts as your live database of running apps
-const routingTable = new Map<string, number>();
+// Store our active memory routes mapping Subdomain -> Port
+const activeRoutes = new Map<string, number>();
 
 export const proxyManager = {
-  // Mounts a new app dynamically (e.g., name: 'cloud', targetPort: 3000)
-  mountApp: (name: string, targetPort: number) => {
-    const fullUrl = `${name}.${MASTER_DOMAIN}`;
-    routingTable.set(fullUrl, targetPort);
-    logger.info(`Proxy rule engaged: ${fullUrl} -> Local Port ${targetPort}`, 'PROXY');
-    return fullUrl;
+  mountApp: (subdomainName: string, targetPort: number) => {
+    const fullUrl = `${subdomainName}.${MASTER_DOMAIN}`;
+    activeRoutes.set(fullUrl, targetPort);
+    logger.success(`Proxy rule engaged: ${fullUrl} -> Local Port ${targetPort}`, 'PROXY');
+
+    // MAGIC: Tell Cloudflare to automatically create the public DNS record
+    if (TUNNEL_NAME) {
+      exec(`cloudflared tunnel route dns ${TUNNEL_NAME} ${fullUrl}`, (error) => {
+        if (error && !error.message.includes('already exists')) {
+          logger.error(`Failed to bind DNS for ${fullUrl}`, 'PROXY');
+        } else {
+          logger.success(`Cloudflare DNS linked to ${fullUrl}`, 'PROXY');
+        }
+      });
+    }
   },
 
-  unmountApp: (name: string) => {
-    const fullUrl = `${name}.${MASTER_DOMAIN}`;
-    routingTable.delete(fullUrl);
-    logger.success(`Proxy rule severed: ${fullUrl}`, 'PROXY');
+  unmountApp: (subdomainName: string) => {
+    const fullUrl = `${subdomainName}.${MASTER_DOMAIN}`;
+    if (activeRoutes.has(fullUrl)) {
+      activeRoutes.delete(fullUrl);
+      logger.success(`Proxy rule severed: ${fullUrl}`, 'PROXY');
+    }
   },
 
-  listActive: () => Array.from(routingTable.entries()).map(([url, port]) => ({ url, port })),
+  listRoutes: () => {
+    return Array.from(activeRoutes.entries()).map(([url, port]) => ({ url, port }));
+  },
 
-  // The Master Interceptor (Runs on every request)
   interceptor: (req: Request, res: Response, next: NextFunction) => {
     const host = req.headers.host;
     
-    // If the request matches a running app, pipe it silently
-    if (host && routingTable.has(host)) {
-      const targetPort = routingTable.get(host);
-      return proxy.web(req, res, { target: `http://localhost:${targetPort}` }, (err) => {
-        logger.error(`Proxy failure for ${host}`, 'PROXY', err);
-        res.status(502).send('Master Daemon: Target app is currently offline or rebooting.');
-      });
+    if (!host || !host.endsWith(MASTER_DOMAIN)) {
+      return next();
     }
-    
-    // If it doesn't match an app, load the r-localhost UI normally
-    next();
+
+    const targetPort = activeRoutes.get(host);
+
+    if (targetPort) {
+      const proxy = createProxyMiddleware({
+        target: `http://localhost:${targetPort}`,
+        changeOrigin: true,
+        ws: true,
+        logLevel: 'silent' // Keeps terminal clean
+      });
+      return proxy(req, res, next);
+    }
+
+    res.status(404).send('R-Localhost: Subdomain not mounted or route offline.');
   }
 };
