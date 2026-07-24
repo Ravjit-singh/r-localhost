@@ -1,276 +1,272 @@
-// ==========================================
-// 1. CORE NAVIGATION SYSTEM
-// ==========================================
-const views = {
-  home: document.getElementById('view-home'),
-  yourhost: document.getElementById('view-yourhost'),
-  rcloud: document.getElementById('view-rcloud'),
-  tunnel: document.getElementById('view-tunnel')
-};
+/**
+ * R-LOCALHOST | Master UI Controller
+ * Bulletproof Error Handling
+ */
 
-const headerTitle = document.getElementById('header-title');
-const btnBack = document.getElementById('btn-back');
+function showToast(message, isError = false) {
+  const toast = document.getElementById('toast');
+  const msgEl = document.getElementById('toast-msg');
+  const iconEl = document.getElementById('toast-icon');
 
-function switchView(targetView) {
-  // Hide all views first
-  Object.values(views).forEach(view => view.classList.add('hidden'));
+  if(!toast) return; // Prevent crashes if HTML is missing
+
+  msgEl.innerText = message;
   
-  // Show target view
-  views[targetView].classList.remove('hidden');
-
-  // Handle Header UI
-  if (targetView === 'home') {
-    btnBack.classList.add('hidden');
-    headerTitle.textContent = 'r-localhost';
-    headerTitle.classList.add('gradient-shimmer');
+  if (isError) {
+    iconEl.innerText = 'error';
+    iconEl.classList.replace('text-md-primary', 'text-md-error');
   } else {
-    btnBack.classList.remove('hidden');
-    headerTitle.classList.remove('gradient-shimmer'); // Turn off shimmer in sub-menus
+    iconEl.innerText = 'check_circle';
+    iconEl.classList.replace('text-md-error', 'text-md-primary');
+  }
+
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 3000);
+}
+
+function switchTab(tabName) {
+  try {
+    const workspaceView = document.getElementById('view-workspace');
+    const generalView = document.getElementById('view-general');
+    const btnWorkspace = document.getElementById('tab-workspace');
+    const btnGeneral = document.getElementById('tab-general');
+
+    if (tabName === 'workspace') {
+      generalView.classList.replace('translate-x-0', 'translate-x-[100%]');
+      generalView.classList.replace('opacity-100', 'opacity-0');
+      generalView.classList.add('pointer-events-none');
+
+      workspaceView.classList.remove('pointer-events-none');
+      workspaceView.classList.replace('-translate-x-[100%]', 'translate-x-0');
+      workspaceView.classList.replace('opacity-0', 'opacity-100');
+
+      btnWorkspace.classList.add('bg-md-primary', 'text-md-onPrimary');
+      btnWorkspace.classList.remove('text-md-text');
+      btnGeneral.classList.remove('bg-md-primary', 'text-md-onPrimary');
+      btnGeneral.classList.add('text-md-text');
+    } else {
+      workspaceView.classList.replace('translate-x-0', '-translate-x-[100%]');
+      workspaceView.classList.replace('opacity-100', 'opacity-0');
+      workspaceView.classList.add('pointer-events-none');
+
+      generalView.classList.remove('pointer-events-none');
+      generalView.classList.replace('translate-x-[100%]', 'translate-x-0');
+      generalView.classList.replace('opacity-0', 'opacity-100');
+
+      btnGeneral.classList.add('bg-md-primary', 'text-md-onPrimary');
+      btnGeneral.classList.remove('text-md-text');
+      btnWorkspace.classList.remove('bg-md-primary', 'text-md-onPrimary');
+      btnWorkspace.classList.add('text-md-text');
+      
+      fetchProxyList();
+    }
+  } catch (err) {
+    console.error("Tab switch error:", err);
+  }
+}
+
+let isMasterOnline = false;
+
+async function checkMasterStatus() {
+  try {
+    const res = await fetch('/api/tunnels/status');
+    const data = await res.json();
+    isMasterOnline = data.status === 'online';
+    updateMasterUI();
+  } catch (err) {
+    console.error("Status check failed", err);
+  }
+}
+
+async function toggleMasterTunnel() {
+  const endpoint = isMasterOnline ? '/api/tunnels/kill' : '/api/tunnels/ignite';
+  const toggle = document.getElementById('master-toggle');
+  const spinner = document.getElementById('master-spinner');
+  const thumb = document.getElementById('master-toggle-thumb');
+  
+  toggle.classList.add('pointer-events-none');
+  thumb.classList.add('opacity-0');
+  spinner.classList.remove('hidden');
+
+  try {
+    const res = await fetch(endpoint, { method: 'POST' });
+    const data = await res.json();
     
-    if (targetView === 'yourhost') {
-      headerTitle.textContent = 'Yourhost Engine';
-      fetchMCStatus();
-    } else if (targetView === 'rcloud') {
-      headerTitle.textContent = 'R-Cloud Drive';
-      fetchRCloudStatus();
-    } else if (targetView === 'tunnel') {
-      headerTitle.textContent = 'WAN Tunnel';
-      fetchTunnelStatus();
+    if (data.success) {
+      isMasterOnline = !isMasterOnline;
+      updateMasterUI();
+      showToast(isMasterOnline ? 'Master Routing Online' : 'Master Routing Offline');
     }
+  } catch (err) {
+    showToast('Network Error', true);
+  } finally {
+    toggle.classList.remove('pointer-events-none');
+    thumb.classList.remove('opacity-0');
+    spinner.classList.add('hidden');
   }
 }
 
-// Bind Navigation Clicks
-document.getElementById('btn-nav-yourhost').addEventListener('click', () => switchView('yourhost'));
-document.getElementById('btn-nav-rcloud').addEventListener('click', () => switchView('rcloud'));
-document.getElementById('btn-nav-tunnel').addEventListener('click', () => switchView('tunnel'));
-btnBack.addEventListener('click', () => switchView('home'));
+function updateMasterUI() {
+  const toggle = document.getElementById('master-toggle');
+  const thumb = document.getElementById('master-toggle-thumb');
+  const statusText = document.getElementById('master-status-text');
 
-// ==========================================
-// 2. UNIVERSAL HELPERS
-// ==========================================
-function updateBadge(elementId, status) {
-  const el = document.getElementById(elementId);
-  if (status === 'running') {
-    el.textContent = 'RUNNING';
-    el.className = 'px-3 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+  if (!toggle || !thumb || !statusText) return;
+
+  if (isMasterOnline) {
+    toggle.classList.replace('bg-md-surfaceHigh', 'bg-md-primary');
+    toggle.classList.replace('border-md-textMuted', 'border-md-primary');
+    thumb.classList.replace('translate-x-0', 'translate-x-6');
+    thumb.classList.replace('bg-md-textMuted', 'bg-md-onPrimary');
+    statusText.innerText = "Active • cloudflared running";
+    statusText.classList.replace('text-md-textMuted', 'text-md-primary');
   } else {
-    el.textContent = 'STOPPED';
-    el.className = 'px-3 py-1 rounded-full text-xs font-medium bg-red-500/10 text-red-400 border border-red-500/20';
+    toggle.classList.replace('bg-md-primary', 'bg-md-surfaceHigh');
+    toggle.classList.replace('border-md-primary', 'border-md-textMuted');
+    thumb.classList.replace('translate-x-6', 'translate-x-0');
+    thumb.classList.replace('bg-md-onPrimary', 'bg-md-textMuted');
+    statusText.innerText = "Offline";
+    statusText.classList.replace('text-md-primary', 'text-md-textMuted');
   }
 }
 
-// ==========================================
-// 3. YOURHOST (MINECRAFT) LOGIC
-// ==========================================
-const btnMCStart = document.getElementById('btn-mc-start');
-const btnMCStop = document.getElementById('btn-mc-stop');
+async function mountProxy() {
+  const nameInput = document.getElementById('proxy-name');
+  const portInput = document.getElementById('proxy-port');
+  
+  if (!nameInput.value || !portInput.value) {
+    showToast('Please enter name and port', true);
+    return;
+  }
 
-async function fetchMCStatus() {
   try {
-    const res = await fetch('/api/server/status');
-    const data = await res.json();
-    updateBadge('mc-status-badge', data.status);
-  } catch (err) {}
-}
-
-btnMCStart.addEventListener('click', async () => {
-  btnMCStart.textContent = 'Igniting...';
-  try {
-    const res = await fetch('/api/server/start', { method: 'POST' });
-    const data = await res.json();
-    updateBadge('mc-status-badge', data.status);
-  } catch (err) { alert('API Error'); }
-  btnMCStart.textContent = 'Ignite';
-});
-
-btnMCStop.addEventListener('click', async () => {
-  try {
-    const res = await fetch('/api/server/stop', { method: 'POST' });
-    const data = await res.json();
-    updateBadge('mc-status-badge', data.status);
-  } catch (err) {}
-});
-
-// ==========================================
-// 4. CLOUDFLARE DNS LOGIC
-// ==========================================
-const cfDomain = document.getElementById('cf-domain');
-const cfZone = document.getElementById('cf-zone');
-const cfToken = document.getElementById('cf-token');
-const btnSync = document.getElementById('btn-dns-sync');
-const dnsLog = document.getElementById('dns-log');
-
-cfDomain.value = localStorage.getItem('r_domain') || '';
-cfZone.value = localStorage.getItem('r_zone') || '';
-cfToken.value = localStorage.getItem('r_token') || '';
-
-function getDnsPayload() {
-  localStorage.setItem('r_domain', cfDomain.value);
-  localStorage.setItem('r_zone', cfZone.value);
-  localStorage.setItem('r_token', cfToken.value);
-  return { token: cfToken.value, zoneId: cfZone.value, subdomains: [cfDomain.value] };
-}
-
-btnSync.addEventListener('click', async () => {
-  btnSync.textContent = 'Syncing...';
-  try {
-    const res = await fetch('/api/dns/sync', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(getDnsPayload())
+    const res = await fetch('/api/tunnels/proxy/mount', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: nameInput.value, port: portInput.value })
     });
+    
     const data = await res.json();
-    if (data.ip) {
-      dnsLog.textContent = `Routed to ${data.ip}`;
-      dnsLog.className = 'text-xs text-emerald-500 font-mono text-center mt-2 h-4';
+    if (data.success) {
+      showToast(`Mounted ${data.url}`);
+      nameInput.value = '';
+      portInput.value = '';
+      fetchProxyList(); 
     }
-  } catch (err) { dnsLog.textContent = 'Network error.'; }
-  btnSync.textContent = 'Manual Sync';
-});
-
-// ==========================================
-// 5. RCLOUD LOGIC
-// ==========================================
-const btnRCloudStart = document.getElementById('btn-rcloud-start');
-const btnRCloudStop = document.getElementById('btn-rcloud-stop');
-const rcloudLinkContainer = document.getElementById('rcloud-link-container');
-const rcloudPublicUrl = document.getElementById('rcloud-public-url');
-let rcloudStatusPoll = null;
-
-function updateRCloudUI(status, url) {
-  updateBadge('rcloud-status-badge', status);
-  if (status === 'running') {
-    rcloudLinkContainer.classList.remove('hidden');
-    if (url) { rcloudPublicUrl.textContent = url; rcloudPublicUrl.href = url; }
-  } else {
-    rcloudLinkContainer.classList.add('hidden');
-    rcloudPublicUrl.textContent = 'Establishing tunnel...';
+  } catch (err) {
+    showToast('Failed to mount proxy', true);
   }
 }
 
-async function fetchRCloudStatus() {
+async function fetchProxyList() {
+  try {
+    const res = await fetch('/api/tunnels/proxy/list');
+    const list = await res.json();
+    
+    const container = document.getElementById('active-routes-list');
+    if(!container) return;
+    
+    container.innerHTML = '';
+
+    if (list.length === 0) {
+      container.innerHTML = '<p class="text-xs text-md-textMuted px-2">No active routes</p>';
+      return;
+    }
+
+    list.forEach(route => {
+      container.innerHTML += `
+        <div class="bg-md-surface rounded-xl p-3 flex justify-between items-center border border-md-surfaceHigh">
+          <div>
+            <p class="text-sm font-medium text-md-text">${route.url}</p>
+            <p class="text-xs text-md-textMuted">Local Port: ${route.port}</p>
+          </div>
+          <button onclick="unmountProxy('${route.url.split('.')[0]}')" class="w-8 h-8 rounded-full flex items-center justify-center bg-md-surfaceHigh text-md-error md-transition active:scale-90">
+            <span class="material-symbols-rounded text-[18px]">delete</span>
+          </button>
+        </div>
+      `;
+    });
+  } catch (err) {
+    console.error('Failed to fetch routes', err);
+  }
+}
+
+async function unmountProxy(name) {
+  try {
+    await fetch('/api/tunnels/proxy/unmount', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name })
+    });
+    showToast(`Removed route for ${name}`);
+    fetchProxyList();
+  } catch (err) {
+    showToast('Failed to remove route', true);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  checkMasterStatus();
+});
+// --- R-CLOUD INTEGRATION ---
+let isRCloudOnline = false;
+
+async function checkRCloudStatus() {
   try {
     const res = await fetch('/api/rcloud/status');
     const data = await res.json();
-    updateRCloudUI(data.status, data.url);
-    
-    if (data.status === 'running' && !data.url && !rcloudStatusPoll) {
-      rcloudStatusPoll = setInterval(async () => {
-        const pollRes = await fetch('/api/rcloud/status');
-        const pollData = await pollRes.json();
-        if (pollData.url) {
-          updateRCloudUI(pollData.status, pollData.url);
-          clearInterval(rcloudStatusPoll);
-          rcloudStatusPoll = null;
-        }
-      }, 2000);
-    }
-  } catch (err) {}
-}
-
-btnRCloudStart.addEventListener('click', async () => {
-  btnRCloudStart.textContent = 'Igniting...';
-  try {
-    const res = await fetch('/api/rcloud/start', { method: 'POST' });
-    const data = await res.json();
-    updateRCloudUI(data.status, data.url);
-    fetchRCloudStatus();
-  } catch (err) {}
-  btnRCloudStart.textContent = 'Ignite Drive';
-});
-
-btnRCloudStop.addEventListener('click', async () => {
-  try {
-    const res = await fetch('/api/rcloud/stop', { method: 'POST' });
-    const data = await res.json();
-    updateRCloudUI(data.status, data.url);
-    if (rcloudStatusPoll) clearInterval(rcloudStatusPoll);
-  } catch (err) {}
-});
-
-// ==========================================
-// 6. WAN TUNNEL LOGIC
-// ==========================================
-const modeDeviceBtn = document.getElementById('mode-device');
-const modeCustomBtn = document.getElementById('mode-custom');
-const customIpInput = document.getElementById('tunnel-custom-ip');
-const portInput = document.getElementById('tunnel-port');
-const btnTunnelStart = document.getElementById('btn-tunnel-start');
-const btnTunnelStop = document.getElementById('btn-tunnel-stop');
-const tunnelLinkContainer = document.getElementById('tunnel-link-container');
-const tunnelPublicUrl = document.getElementById('tunnel-public-url');
-
-let currentTunnelMode = 'device';
-let tunnelStatusPoll = null;
-
-modeDeviceBtn.addEventListener('click', () => {
-  currentTunnelMode = 'device';
-  modeDeviceBtn.className = 'flex-1 py-2 text-sm font-semibold rounded-lg bg-gray-700 text-white shadow transition-all';
-  modeCustomBtn.className = 'flex-1 py-2 text-sm font-semibold rounded-lg text-gray-400 hover:text-white transition-all';
-  customIpInput.classList.add('hidden');
-});
-
-modeCustomBtn.addEventListener('click', () => {
-  currentTunnelMode = 'custom';
-  modeCustomBtn.className = 'flex-1 py-2 text-sm font-semibold rounded-lg bg-gray-700 text-white shadow transition-all';
-  modeDeviceBtn.className = 'flex-1 py-2 text-sm font-semibold rounded-lg text-gray-400 hover:text-white transition-all';
-  customIpInput.classList.remove('hidden');
-});
-
-function updateTunnelUI(status, url) {
-  updateBadge('tunnel-status-badge', status);
-  if (status === 'running') {
-    tunnelLinkContainer.classList.remove('hidden');
-    if (url) { tunnelPublicUrl.textContent = url; tunnelPublicUrl.href = url; }
-  } else {
-    tunnelLinkContainer.classList.add('hidden');
-    tunnelPublicUrl.textContent = 'Establishing routing...';
+    isRCloudOnline = data.running;
+    updateRCloudUI();
+  } catch (err) {
+    console.error("RCloud status check failed");
   }
 }
 
-async function fetchTunnelStatus() {
+async function toggleRCloud() {
+  const endpoint = isRCloudOnline ? '/api/rcloud/stop' : '/api/rcloud/start';
+  const btn = document.getElementById('rcloud-btn');
+  
+  btn.classList.add('pointer-events-none', 'opacity-70');
+  btn.innerText = "Processing...";
+
   try {
-    const res = await fetch('/api/tunnel/status');
+    const res = await fetch(endpoint, { method: 'POST' });
     const data = await res.json();
-    updateTunnelUI(data.status, data.url);
     
-    if (data.status === 'running' && !data.url && !tunnelStatusPoll) {
-      tunnelStatusPoll = setInterval(async () => {
-        const pollRes = await fetch('/api/tunnel/status');
-        const pollData = await pollRes.json();
-        if (pollData.url) {
-          updateTunnelUI(pollData.status, pollData.url);
-          clearInterval(tunnelStatusPoll);
-          tunnelStatusPoll = null;
-        }
-      }, 2000);
+    if (data.success) {
+      isRCloudOnline = !isRCloudOnline;
+      updateRCloudUI();
+      showToast(isRCloudOnline ? 'RCloud Storage Online' : 'RCloud Storage Offline');
+    } else {
+      showToast('Failed to toggle RCloud', true);
     }
-  } catch (err) {}
+  } catch (err) {
+    showToast('Network Error', true);
+  } finally {
+    btn.classList.remove('pointer-events-none', 'opacity-70');
+  }
 }
 
-btnTunnelStart.addEventListener('click', async () => {
-  const port = portInput.value;
-  const customIp = customIpInput.value;
-  if (!port) return alert('Port is required!');
-  if (currentTunnelMode === 'custom' && !customIp) return alert('Custom LAN IP required!');
+function updateRCloudUI() {
+  const btn = document.getElementById('rcloud-btn');
+  const statusText = document.getElementById('rcloud-status');
+  
+  if (!btn || !statusText) return;
 
-  btnTunnelStart.textContent = 'Igniting...';
-  try {
-    const res = await fetch('/api/tunnel/start', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mode: currentTunnelMode, customIp, port })
-    });
-    const data = await res.json();
-    updateTunnelUI(data.status, data.url);
-    fetchTunnelStatus(); 
-  } catch (err) {}
-  btnTunnelStart.textContent = 'Ignite Tunnel';
-});
+  if (isRCloudOnline) {
+    btn.innerText = "Halt Drive";
+    btn.classList.replace('bg-md-primary', 'bg-md-surfaceHigh');
+    btn.classList.replace('text-md-onPrimary', 'text-md-error');
+    statusText.innerText = "Status: Online (Port 3000)";
+    statusText.classList.replace('text-md-textMuted', 'text-md-primary');
+  } else {
+    btn.innerText = "Ignite Drive";
+    btn.classList.replace('bg-md-surfaceHigh', 'bg-md-primary');
+    btn.classList.replace('text-md-error', 'text-md-onPrimary');
+    statusText.innerText = "Status: Offline";
+    statusText.classList.replace('text-md-primary', 'text-md-textMuted');
+  }
+}
 
-btnTunnelStop.addEventListener('click', async () => {
-  try {
-    const res = await fetch('/api/tunnel/stop', { method: 'POST' });
-    const data = await res.json();
-    updateTunnelUI(data.status, data.url);
-    if (tunnelStatusPoll) clearInterval(tunnelStatusPoll);
-  } catch (err) {}
-});
+// Add this inside your existing DOMContentLoaded listener at the bottom:
+// checkRCloudStatus(); 

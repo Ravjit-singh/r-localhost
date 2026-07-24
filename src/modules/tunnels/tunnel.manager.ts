@@ -1,36 +1,48 @@
 import { spawn, ChildProcess } from 'child_process';
 import { logger } from '../../shared/logger.js';
-import 'dotenv/config';
 
 let masterTunnel: ChildProcess | null = null;
-const MASTER_PORT = process.env.PORT || 4000;
+const TUNNEL_NAME = process.env.MASTER_TUNNEL_NAME;
 
 export const tunnelManager = {
   ignite: (): boolean => {
     if (masterTunnel) return false;
     
     try {
-      logger.info('Igniting Global Master Tunnel Engine...', 'TUNNEL');
+      logger.info(`Igniting Permanent Tunnel...`, 'TUNNEL');
       
-      // We route a single quick tunnel to the Master Daemon itself
-      masterTunnel = spawn('cloudflared', ['tunnel', '--url', `http://localhost:${MASTER_PORT}`, 'run', 'master-rcloud'], { 
+      masterTunnel = spawn(`cloudflared tunnel run ${TUNNEL_NAME}`, { 
         shell: true 
       });
 
-      logger.success('Global Tunnel Node Online and Routing.', 'TUNNEL');
+      // Minimalist Clean Log
+      setTimeout(() => {
+        if (masterTunnel) logger.success('Global Tunnel Routing Online.', 'TUNNEL');
+      }, 1500);
+
+      masterTunnel.on('close', (code) => {
+        if (code !== 0 && code !== null) {
+          logger.error(`Tunnel crashed (Code ${code})`, 'TUNNEL');
+        }
+        masterTunnel = null;
+      });
+
       return true;
     } catch (error) {
-      logger.error('Master Tunnel catastrophic failure', 'TUNNEL', error);
+      logger.error('Master Tunnel failure', 'TUNNEL', error);
       return false;
     }
   },
 
   kill: (): boolean => {
-    if (masterTunnel) masterTunnel.kill('SIGINT');
-    masterTunnel = null;
-    logger.success('Global Tunnel severed. Device dark.', 'TUNNEL');
-    return true;
+    if (masterTunnel) {
+      masterTunnel.kill('SIGINT');
+      masterTunnel = null;
+      logger.success('Global Tunnel severed. Device dark.', 'TUNNEL');
+      return true;
+    }
+    return false;
   },
 
-  status: () => ({ status: masterTunnel ? 'online' : 'offline' })
+  status: () => ({ status: masterTunnel !== null ? 'online' : 'offline' })
 };

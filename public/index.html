@@ -1,174 +1,158 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>r-localhost | Master OS</title>
+  <title>R-Localhost</title>
+  
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,1,0" rel="stylesheet">
+  
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
-      darkMode: 'class',
-      theme: { extend: { colors: { gray: { 900: '#0a0a0c', 800: '#141418', 700: '#1f1f24' } } } }
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Roboto', 'sans-serif'] },
+          colors: {
+            md: {
+              bg: '#141218',
+              surface: '#211F26',
+              surfaceHigh: '#2B2930',
+              primary: '#A8C7FA',
+              onPrimary: '#062E6F',
+              text: '#E6E0E9',
+              textMuted: '#CAC4D0',
+              error: '#FFB4AB',
+            }
+          }
+        }
+      }
     }
   </script>
   <style>
-    /* Natively replicated gradient-shimmer library effect */
-    .gradient-shimmer {
-      background-image: linear-gradient(to right, #93c5fd, #c084fc, #f9a8d4, #fde047, #93c5fd);
-      background-size: 200% auto;
-      color: transparent;
-      -webkit-background-clip: text;
-      background-clip: text;
-      animation: shimmer 3s linear infinite;
+    body { -webkit-tap-highlight-color: transparent; }
+    .md-transition { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+    
+    #toast {
+      transition: transform 0.3s ease, opacity 0.3s ease;
+      transform: translateY(100px);
+      opacity: 0;
     }
-    @keyframes shimmer {
-      0% { background-position: 0% center; }
-      100% { background-position: -200% center; }
+    #toast.show {
+      transform: translateY(0);
+      opacity: 1;
     }
-    .hide-scrollbar::-webkit-scrollbar { display: none; }
   </style>
 </head>
-<body class="bg-black text-gray-100 h-screen w-screen overflow-hidden flex flex-col font-sans selection:bg-emerald-500/30">
-  
-  <!-- Dynamic Header -->
-  <header class="px-6 py-6 border-b border-gray-800 bg-gray-900/80 backdrop-blur-xl flex items-center gap-4 z-10 shadow-md">
-    <button id="btn-back" class="hidden text-gray-400 hover:text-white transition-colors active:scale-95">
-      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
-    </button>
-    <div>
-      <h1 id="header-title" class="text-2xl font-bold tracking-tight gradient-shimmer">r-localhost</h1>
-      <p class="text-sm text-gray-500 mt-0.5 font-medium">Master Daemon <span class="text-emerald-400 tracking-wide text-xs ml-2 uppercase animate-pulse">● Online</span></p>
+<body class="bg-md-bg text-md-text font-sans antialiased min-h-screen flex flex-col overflow-x-hidden">
+
+  <!-- Android Top App Bar -->
+  <header class="px-4 py-4 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <h1 class="text-[22px] font-normal tracking-wide">R-Localhost</h1>
     </div>
+    <button class="w-12 h-12 rounded-full flex items-center justify-center md-transition active:bg-md-surfaceHigh">
+      <span class="material-symbols-rounded text-md-text">settings</span>
+    </button>
   </header>
 
-  <main class="flex-1 overflow-y-auto hide-scrollbar p-6 relative bg-gradient-to-b from-black via-gray-900/20 to-black">
-    
-    <!-- VIEW 1: HOME MENU -->
-    <div id="view-home" class="space-y-4 transition-all duration-300">
+  <!-- Master Tunnel Controller -->
+  <div class="px-4 mt-2 mb-6">
+    <div class="bg-md-surface rounded-[28px] p-5 flex items-center justify-between">
+      <div>
+        <h2 class="text-lg font-normal text-md-text">Master Routing</h2>
+        <p class="text-sm text-md-textMuted mt-1" id="master-status-text">Checking status...</p>
+      </div>
       
-      <!-- Yourhost App -->
-      <div id="btn-nav-yourhost" class="bg-gray-900 border border-gray-800 rounded-2xl p-5 shadow-lg active:scale-95 transition-transform cursor-pointer flex justify-between items-center">
-        <div class="flex items-center gap-4">
-          <div class="h-12 w-12 bg-blue-500/10 text-blue-400 rounded-xl flex items-center justify-center border border-blue-500/20 shadow-[0_0_15px_rgba(59,130,246,0.15)]">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M2 12h20M4.93 4.93l14.14 14.14M4.93 19.07L19.07 4.93"/></svg>
-          </div>
-          <div>
-            <h2 class="text-lg font-semibold text-gray-100">Yourhost</h2>
-            <p class="text-sm text-gray-500">Bedrock & DNS</p>
-          </div>
+      <button id="master-toggle" class="w-14 h-8 rounded-full bg-md-surfaceHigh border-2 border-md-textMuted flex items-center p-1 md-transition relative" onclick="toggleMasterTunnel()">
+        <div id="master-spinner" class="absolute inset-0 flex items-center justify-center hidden">
+          <span class="material-symbols-rounded animate-spin text-[16px] text-md-primary">progress_activity</span>
         </div>
-      </div>
-
-      <!-- RCloud App -->
-      <div id="btn-nav-rcloud" class="bg-gray-900 border border-gray-800 rounded-2xl p-5 shadow-lg active:scale-95 transition-transform cursor-pointer flex justify-between items-center">
-        <div class="flex items-center gap-4">
-          <div class="h-12 w-12 bg-purple-500/10 text-purple-400 rounded-xl flex items-center justify-center border border-purple-500/20 shadow-[0_0_15px_rgba(168,85,247,0.15)]">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-          </div>
-          <div>
-            <h2 class="text-lg font-semibold text-gray-100">R-Cloud</h2>
-            <p class="text-sm text-gray-500">Personal Drive</p>
-          </div>
-        </div>
-      </div>
-
-      <!-- WAN Tunnel App -->
-      <div id="btn-nav-tunnel" class="bg-gray-900 border border-gray-800 rounded-2xl p-5 shadow-lg active:scale-95 transition-transform cursor-pointer flex justify-between items-center">
-        <div class="flex items-center gap-4">
-          <div class="h-12 w-12 bg-emerald-500/10 text-emerald-400 rounded-xl flex items-center justify-center border border-emerald-500/20 shadow-[0_0_15px_rgba(16,185,129,0.15)]">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 1 0 0-20zM2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-          </div>
-          <div>
-            <h2 class="text-lg font-semibold text-gray-100">WAN Tunnel</h2>
-            <p class="text-sm text-gray-500">Custom Port Proxy</p>
-          </div>
-        </div>
-      </div>
-
+        <div id="master-toggle-thumb" class="w-5 h-5 rounded-full bg-md-textMuted md-transition translate-x-0"></div>
+      </button>
     </div>
+  </div>
 
-    <!-- VIEW 2: YOURHOST SETTINGS -->
-    <div id="view-yourhost" class="hidden space-y-6">
-      <div class="bg-gray-900 border border-gray-800 rounded-2xl p-5 shadow-lg">
-        <div class="flex justify-between items-center mb-6">
-          <h2 class="text-lg font-semibold text-gray-200">Bedrock Engine</h2>
-          <span id="mc-status-badge" class="px-3 py-1 rounded-full text-xs font-medium bg-red-500/10 text-red-500 border border-red-500/20">STOPPED</span>
-        </div>
-        <div class="flex gap-3">
-          <button id="btn-mc-start" class="flex-1 bg-gray-100 text-black font-semibold py-3 rounded-xl active:scale-95 transition-transform">Ignite</button>
-          <button id="btn-mc-stop" class="flex-1 bg-gray-800 text-gray-300 font-semibold py-3 rounded-xl active:scale-95 transition-transform border border-gray-700">Kill</button>
-        </div>
-      </div>
-
-      <div class="bg-gray-900 border border-gray-800 rounded-2xl p-5 shadow-lg">
-        <div class="mb-6">
-          <h2 class="text-lg font-semibold text-gray-200">Cloudflare DNS</h2>
-          <p class="text-sm text-gray-400 mt-1">Bind dynamic IPv6</p>
-        </div>
-        <div class="space-y-4">
-          <input type="text" id="cf-domain" placeholder="Subdomain" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-colors">
-          <input type="text" id="cf-zone" placeholder="Zone ID" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-colors">
-          <input type="password" id="cf-token" placeholder="API Token" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 transition-colors">
-          <div class="flex gap-3 mt-2">
-            <button id="btn-dns-sync" class="flex-1 bg-blue-600/20 text-blue-400 border border-blue-600/30 font-semibold py-3 rounded-xl active:scale-95 transition-all">Manual Sync</button>
-            <button id="btn-dns-auto" class="flex-1 bg-gray-800 text-gray-300 border border-gray-700 font-semibold py-3 rounded-xl active:scale-95 transition-all">Auto: OFF</button>
-          </div>
-          <p id="dns-log" class="text-xs text-gray-500 font-mono text-center mt-2 h-4"></p>
-        </div>
-      </div>
+  <!-- Segmented Tabs -->
+  <div class="px-4 mb-6">
+    <div class="flex bg-md-surfaceHigh rounded-full p-1">
+      <button id="tab-workspace" class="flex-1 py-2 rounded-full bg-md-primary text-md-onPrimary font-medium text-sm md-transition" onclick="switchTab('workspace')">
+        Workspace
+      </button>
+      <button id="tab-general" class="flex-1 py-2 rounded-full text-md-text font-medium text-sm md-transition" onclick="switchTab('general')">
+        General
+      </button>
     </div>
+  </div>
 
-    <!-- VIEW 3: RCLOUD SETTINGS -->
-    <div id="view-rcloud" class="hidden space-y-6">
-      <div class="bg-gray-900 border border-gray-800 rounded-2xl p-5 shadow-lg relative overflow-hidden">
-        <div class="absolute top-0 right-0 w-32 h-32 bg-purple-500/5 rounded-full blur-3xl"></div>
-        <div class="flex justify-between items-center mb-6 relative z-10">
-          <h2 class="text-lg font-semibold text-gray-200">Personal Drive Core</h2>
-          <span id="rcloud-status-badge" class="px-3 py-1 rounded-full text-xs font-medium bg-red-500/10 text-red-500 border border-red-500/20">STOPPED</span>
-        </div>
-        <div class="flex gap-3 mb-4 relative z-10">
-          <button id="btn-rcloud-start" class="flex-1 bg-gray-100 text-black font-semibold py-3 rounded-xl active:scale-95 transition-transform">Ignite Drive</button>
-          <button id="btn-rcloud-stop" class="flex-1 bg-gray-800 text-gray-300 font-semibold py-3 rounded-xl active:scale-95 transition-transform border border-gray-700">Kill</button>
-        </div>
-        <div id="rcloud-link-container" class="hidden pt-4 border-t border-gray-800 flex flex-col items-center justify-center relative z-10">
-          <p class="text-xs text-gray-400 mb-1">Global WAN Link</p>
-          <a id="rcloud-public-url" href="#" target="_blank" class="text-purple-400 font-mono text-sm hover:underline">Establishing tunnel...</a>
-        </div>
-      </div>
-    </div>
-
-    <!-- VIEW 4: WAN TUNNEL CONFIG -->
-    <div id="view-tunnel" class="hidden space-y-6">
-      <div class="bg-gray-900 border border-gray-800 rounded-2xl p-5 shadow-2xl relative overflow-hidden">
-        <div class="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full blur-3xl"></div>
-        <div class="flex justify-between items-center mb-6 relative z-10">
-          <h2 class="text-lg font-semibold text-gray-100">Global Proxy Engine</h2>
-          <span id="tunnel-status-badge" class="px-3 py-1 rounded-full text-xs font-medium bg-red-500/10 text-red-500 border border-red-500/20">STOPPED</span>
-        </div>
-
-        <div class="space-y-4 relative z-10">
-          <div class="flex bg-gray-800 rounded-xl p-1 border border-gray-700">
-            <button id="mode-device" class="flex-1 py-2 text-sm font-semibold rounded-lg bg-gray-700 text-white shadow transition-all">Device (Local)</button>
-            <button id="mode-custom" class="flex-1 py-2 text-sm font-semibold rounded-lg text-gray-400 hover:text-white transition-all">Custom LAN</button>
-          </div>
-
-          <input type="text" id="tunnel-custom-ip" placeholder="Target LAN IP (e.g. 192.168.1.5)" class="hidden w-full bg-black/50 border border-gray-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-500 transition-colors placeholder-gray-600">
-          <input type="number" id="tunnel-port" placeholder="Port Number (e.g. 8080)" class="w-full bg-black/50 border border-gray-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-emerald-500 transition-colors placeholder-gray-600">
-          
-          <div class="flex gap-3 pt-2">
-            <button id="btn-tunnel-start" class="flex-1 bg-emerald-500 text-black font-bold py-3 rounded-xl active:scale-95 transition-transform shadow-[0_0_20px_rgba(16,185,129,0.2)]">Ignite Tunnel</button>
-            <button id="btn-tunnel-stop" class="flex-1 bg-black text-gray-300 font-semibold py-3 rounded-xl active:scale-95 transition-transform border border-gray-700">Kill</button>
-          </div>
-
-          <div id="tunnel-link-container" class="hidden pt-4 mt-2 border-t border-gray-800 flex flex-col items-center justify-center">
-            <p class="text-xs text-gray-500 mb-1">Global Active Link</p>
-            <a id="tunnel-public-url" href="#" target="_blank" class="text-emerald-400 font-mono text-sm hover:text-emerald-300 transition-colors">Establishing routing...</a>
-          </div>
-        </div>
-      </div>
-    </div>
+  <main class="flex-1 relative w-full overflow-hidden">
     
+    <!-- R-WORKSPACE VIEW -->
+    <div id="view-workspace" class="absolute w-full px-4 md-transition transform translate-x-0 opacity-100">
+      
+      <!-- RCloud Card -->
+      <div class="bg-md-surface rounded-[24px] p-5 mb-4">
+        <div class="flex items-center gap-4 mb-5">
+          <div class="w-10 h-10 rounded-full bg-md-surfaceHigh flex items-center justify-center">
+            <span class="material-symbols-rounded text-md-primary">cloud</span>
+          </div>
+          <div>
+            <h3 class="text-base font-medium">R-Cloud Storage</h3>
+            <p class="text-sm text-md-textMuted" id="rcloud-status">Status: Unknown</p>
+          </div>
+        </div>
+        <!-- Fully Wired Button -->
+        <button id="rcloud-btn" onclick="toggleRCloud()" class="w-full py-2.5 rounded-full bg-md-surfaceHigh text-md-primary font-medium text-sm md-transition active:scale-[0.98]">
+          Ignite Drive
+        </button>
+      </div>
+
+      <!-- YourHost Card -->
+      <div class="bg-md-surface rounded-[24px] p-5 mb-4">
+        <div class="flex items-center gap-4 mb-5">
+          <div class="w-10 h-10 rounded-full bg-md-surfaceHigh flex items-center justify-center">
+            <span class="material-symbols-rounded text-md-primary">sports_esports</span>
+          </div>
+          <div>
+            <h3 class="text-base font-medium">YourHost</h3>
+            <p class="text-sm text-md-textMuted" id="mc-status">Bedrock Engine</p>
+          </div>
+        </div>
+        <button id="mc-btn" class="w-full py-2.5 rounded-full bg-md-surfaceHigh text-md-primary font-medium text-sm md-transition active:scale-[0.98]">
+          Initialize Server
+        </button>
+      </div>
+
+    </div>
+
+    <!-- GENERAL VIEW (Dynamic Proxy) -->
+    <div id="view-general" class="absolute w-full px-4 md-transition transform translate-x-[100%] opacity-0 pointer-events-none">
+      <div class="bg-md-surface rounded-[24px] p-5">
+        <h2 class="text-base font-medium text-md-primary mb-4">Mount Subdomain</h2>
+        <div class="flex flex-col gap-4 mb-6">
+          <input type="text" id="proxy-name" placeholder="Name (e.g., api)" class="w-full bg-md-bg text-md-text border border-md-surfaceHigh rounded-xl px-4 py-3 focus:outline-none focus:border-md-primary md-transition">
+          <input type="number" id="proxy-port" placeholder="Local Port (e.g., 5000)" class="w-full bg-md-bg text-md-text border border-md-surfaceHigh rounded-xl px-4 py-3 focus:outline-none focus:border-md-primary md-transition">
+        </div>
+        <button onclick="mountProxy()" id="mount-btn" class="w-full py-2.5 rounded-full bg-md-primary text-md-onPrimary font-medium text-sm md-transition active:scale-[0.98] flex items-center justify-center gap-2">
+          <span class="material-symbols-rounded text-[18px]">add</span> Create Route
+        </button>
+      </div>
+
+      <h3 class="text-sm font-medium text-md-textMuted mt-6 mb-3 px-2">Active Routes</h3>
+      <div id="active-routes-list" class="flex flex-col gap-2">
+        <!-- JS Populated -->
+      </div>
+    </div>
+
   </main>
+
+  <!-- Android System Toast Notification -->
+  <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-md-surfaceHigh text-md-text px-4 py-3 rounded-xl shadow-lg flex items-center gap-3 z-50 pointer-events-none w-[90%] max-w-[350px]">
+    <span id="toast-icon" class="material-symbols-rounded text-md-primary text-[20px]">info</span>
+    <span id="toast-msg" class="text-sm font-medium">System message</span>
+  </div>
+
   <script src="/app.js"></script>
 </body>
 </html>

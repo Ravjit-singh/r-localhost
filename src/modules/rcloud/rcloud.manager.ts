@@ -1,35 +1,34 @@
 import { spawn, ChildProcess } from 'child_process';
 import { logger } from '../../shared/logger.js';
+import { proxyManager } from '../tunnels/proxy.manager.js';
 
 let rcloudProcess: ChildProcess | null = null;
-let tunnelProcess: ChildProcess | null = null;
 
-// Exact path to your rcloud server
-const RCLOUD_DIR = '/data/data/com.termux/files/home/rcloud/server';
-const RCLOUD_PORT = 3000; 
-
-// Your new permanent domain
-const STATIC_URL = 'https://cloud.ravjit.me';
+const RCLOUD_DIR = process.env.RCLOUD_DIR;
+const RCLOUD_PORT = Number(process.env.RCLOUD_PORT) || 3000;
 
 export const rcloudManager = {
   start: (): boolean => {
     if (rcloudProcess) return false;
+    if (!RCLOUD_DIR) {
+      logger.error('RCLOUD_DIR not specified in .env', 'RCLOUD');
+      return false;
+    }
 
     try {
-      logger.info('Igniting RCloud Personal Drive...', 'RCLOUD');
+      logger.info('Igniting RCloud Storage Engine...', 'RCLOUD');
       
-      rcloudProcess = spawn('npm', ['start'], {
+      rcloudProcess = spawn('npm start', {
         cwd: RCLOUD_DIR,
         shell: true
       });
 
-      logger.info('Establishing Persistent WAN Link...', 'TUNNEL');
-      // We now use the 'run' command and target your 'master-rcloud' tunnel
-      tunnelProcess = spawn('cloudflared', ['tunnel', 'run', '--url', `http://localhost:${RCLOUD_PORT}`, 'master-rcloud'], {
-        shell: true
-      });
+      // Minimalist Clean Log
+      setTimeout(() => {
+        if (rcloudProcess) logger.success(`RCloud active on Port ${RCLOUD_PORT}`, 'RCLOUD');
+      }, 1500);
 
-      logger.success(`Persistent WAN Link Locked: ${STATIC_URL}`, 'TUNNEL');
+      proxyManager.mountApp('cloud', RCLOUD_PORT);
       return true;
     } catch (error) {
       logger.error('Failed to boot RCloud', 'RCLOUD', error);
@@ -38,18 +37,18 @@ export const rcloudManager = {
   },
 
   stop: (): boolean => {
-    if (rcloudProcess) rcloudProcess.kill('SIGINT');
-    if (tunnelProcess) tunnelProcess.kill('SIGINT');
-    rcloudProcess = null;
-    tunnelProcess = null;
-    logger.success('RCloud and WAN Tunnel cleanly severed.', 'RCLOUD');
-    return true;
+    if (rcloudProcess) {
+      rcloudProcess.kill('SIGINT');
+      rcloudProcess = null;
+      proxyManager.unmountApp('cloud');
+      logger.success('RCloud engine halted.', 'RCLOUD');
+      return true;
+    }
+    return false;
   },
 
-  status: () => {
-    return {
-      status: rcloudProcess ? 'running' : 'stopped',
-      url: rcloudProcess ? STATIC_URL : null
-    };
-  }
+  status: () => ({
+    running: rcloudProcess !== null,
+    port: RCLOUD_PORT
+  })
 };
