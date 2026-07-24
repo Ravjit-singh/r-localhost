@@ -24,12 +24,14 @@
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
-    "http-proxy": "^1.18.1"
+    "http-proxy": "^1.18.1",
+    "http-proxy-middleware": "^4.2.0"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/http-proxy": "^1.17.17",
+    "@types/http-proxy-middleware": "^0.19.3",
     "@types/node": "^26.1.1",
     "tsx": "^4.23.1",
     "typescript": "^5.4.5"

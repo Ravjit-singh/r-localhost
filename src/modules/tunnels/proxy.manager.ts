@@ -15,7 +15,7 @@ export const proxyManager = {
     activeRoutes.set(fullUrl, targetPort);
     logger.success(`Proxy rule engaged: ${fullUrl} -> Local Port ${targetPort}`, 'PROXY');
 
-    // MAGIC: Tell Cloudflare to automatically create the public DNS record
+    // Automatically tell Cloudflare to create the public DNS record
     if (TUNNEL_NAME) {
       exec(`cloudflared tunnel route dns ${TUNNEL_NAME} ${fullUrl}`, (error) => {
         if (error && !error.message.includes('already exists')) {
@@ -35,7 +35,8 @@ export const proxyManager = {
     }
   },
 
-  listRoutes: () => {
+  // FIXED: Renamed to listActive to match tunnel.routes.ts
+  listActive: () => {
     return Array.from(activeRoutes.entries()).map(([url, port]) => ({ url, port }));
   },
 
