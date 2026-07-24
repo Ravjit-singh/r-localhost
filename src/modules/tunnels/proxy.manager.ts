@@ -6,16 +6,29 @@ import { exec } from 'child_process';
 const MASTER_DOMAIN = process.env.MASTER_DOMAIN || 'ravjit.me';
 const TUNNEL_NAME = process.env.MASTER_TUNNEL_NAME;
 
-// Store our active memory routes mapping Subdomain -> Port
-const activeRoutes = new Map<string, number>();
+// Store the port numbers for the UI list
+const routePorts = new Map<string, number>();
+// Store the actual proxy instances so we reuse them (Fixes the memory leak!)
+const activeProxies = new Map<string, any>();
 
 export const proxyManager = {
   mountApp: (subdomainName: string, targetPort: number) => {
     const fullUrl = `${subdomainName}.${MASTER_DOMAIN}`;
-    activeRoutes.set(fullUrl, targetPort);
+    
+    // Create the proxy instance exactly ONCE
+    const proxyInstance = createProxyMiddleware({
+      target: `http://localhost:${targetPort}`,
+      changeOrigin: true,
+      ws: true,
+      xfwd: true,
+      logLevel: 'silent'
+    });
+
+    activeProxies.set(fullUrl, proxyInstance);
+    routePorts.set(fullUrl, targetPort);
+    
     logger.success(`Proxy rule engaged: ${fullUrl} -> Local Port ${targetPort}`, 'PROXY');
 
-    // Automatically tell Cloudflare to create the public DNS record
     if (TUNNEL_NAME) {
       exec(`cloudflared tunnel route dns ${TUNNEL_NAME} ${fullUrl}`, (error) => {
         if (error && !error.message.includes('already exists')) {
@@ -29,15 +42,15 @@ export const proxyManager = {
 
   unmountApp: (subdomainName: string) => {
     const fullUrl = `${subdomainName}.${MASTER_DOMAIN}`;
-    if (activeRoutes.has(fullUrl)) {
-      activeRoutes.delete(fullUrl);
+    if (activeProxies.has(fullUrl)) {
+      activeProxies.delete(fullUrl);
+      routePorts.delete(fullUrl);
       logger.success(`Proxy rule severed: ${fullUrl}`, 'PROXY');
     }
   },
 
-  // FIXED: Renamed to listActive to match tunnel.routes.ts
   listActive: () => {
-    return Array.from(activeRoutes.entries()).map(([url, port]) => ({ url, port }));
+    return Array.from(routePorts.entries()).map(([url, port]) => ({ url, port }));
   },
 
   interceptor: (req: Request, res: Response, next: NextFunction) => {
@@ -47,15 +60,10 @@ export const proxyManager = {
       return next();
     }
 
-    const targetPort = activeRoutes.get(host);
+    const proxy = activeProxies.get(host);
 
-    if (targetPort) {
-      const proxy = createProxyMiddleware({
-        target: `http://localhost:${targetPort}`,
-        changeOrigin: true,
-        ws: true,
-        logLevel: 'silent' // Keeps terminal clean
-      });
+    if (proxy) {
+      // Reuse the cached proxy instance instead of creating a new one
       return proxy(req, res, next);
     }
 
