@@ -8,7 +8,7 @@ function showToast(message, isError = false) {
   const msgEl = document.getElementById('toast-msg');
   const iconEl = document.getElementById('toast-icon');
 
-  if(!toast) return; // Prevent crashes if HTML is missing
+  if(!toast) return;
 
   msgEl.innerText = message;
   
@@ -65,6 +65,7 @@ function switchTab(tabName) {
   }
 }
 
+// --- MASTER TUNNEL INTEGRATION ---
 let isMasterOnline = false;
 
 async function checkMasterStatus() {
@@ -130,6 +131,7 @@ function updateMasterUI() {
   }
 }
 
+// --- DYNAMIC PROXY INTEGRATION ---
 async function mountProxy() {
   const nameInput = document.getElementById('proxy-name');
   const portInput = document.getElementById('proxy-port');
@@ -205,9 +207,6 @@ async function unmountProxy(name) {
   }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  checkMasterStatus();
-});
 // --- R-CLOUD INTEGRATION ---
 let isRCloudOnline = false;
 
@@ -268,5 +267,69 @@ function updateRCloudUI() {
   }
 }
 
-// Add this inside your existing DOMContentLoaded listener at the bottom:
-// checkRCloudStatus(); 
+// --- YOURHOST (MINECRAFT) INTEGRATION ---
+let isMCOnline = false;
+
+async function checkMCStatus() {
+  try {
+    const res = await fetch('/api/mc/status');
+    const data = await res.json();
+    isMCOnline = data.running;
+    updateMCUI();
+  } catch (err) {
+    console.error("YourHost status check failed");
+  }
+}
+
+async function toggleMC() {
+  const endpoint = isMCOnline ? '/api/mc/stop' : '/api/mc/start';
+  const btn = document.getElementById('mc-btn');
+  
+  btn.classList.add('pointer-events-none', 'opacity-70');
+  btn.innerText = "Processing...";
+
+  try {
+    const res = await fetch(endpoint, { method: 'POST' });
+    const data = await res.json();
+    
+    if (data.success) {
+      isMCOnline = !isMCOnline;
+      updateMCUI();
+      showToast(isMCOnline ? 'YourHost Engine Online' : 'YourHost Engine Offline');
+    } else {
+      showToast('Failed to toggle YourHost', true);
+    }
+  } catch (err) {
+    showToast('Network Error', true);
+  } finally {
+    btn.classList.remove('pointer-events-none', 'opacity-70');
+  }
+}
+
+function updateMCUI() {
+  const btn = document.getElementById('mc-btn');
+  const statusText = document.getElementById('mc-status');
+  
+  if (!btn || !statusText) return;
+
+  if (isMCOnline) {
+    btn.innerText = "Halt Server";
+    btn.classList.replace('bg-md-surfaceHigh', 'bg-md-primary');
+    btn.classList.replace('text-md-primary', 'text-md-onPrimary');
+    statusText.innerText = "Status: Online";
+    statusText.classList.replace('text-md-textMuted', 'text-md-primary');
+  } else {
+    btn.innerText = "Initialize Server";
+    btn.classList.replace('bg-md-primary', 'bg-md-surfaceHigh');
+    btn.classList.replace('text-md-onPrimary', 'text-md-primary');
+    statusText.innerText = "Bedrock Engine";
+    statusText.classList.replace('text-md-primary', 'text-md-textMuted');
+  }
+}
+
+// --- INIT APP ON LOAD ---
+document.addEventListener('DOMContentLoaded', () => {
+  checkMasterStatus();
+  checkRCloudStatus();
+  checkMCStatus();
+});

@@ -62,7 +62,7 @@
     <div class="bg-md-surface rounded-[28px] p-5 flex items-center justify-between">
       <div>
         <h2 class="text-lg font-normal text-md-text">Master Routing</h2>
-        <p class="text-sm text-md-textMuted mt-1" id="master-status-text">Checking status...</p>
+        <p class="text-sm text-md-textMuted" id="master-status-text">Checking status...</p>
       </div>
       
       <button id="master-toggle" class="w-14 h-8 rounded-full bg-md-surfaceHigh border-2 border-md-textMuted flex items-center p-1 md-transition relative" onclick="toggleMasterTunnel()">
@@ -102,7 +102,6 @@
             <p class="text-sm text-md-textMuted" id="rcloud-status">Status: Unknown</p>
           </div>
         </div>
-        <!-- Fully Wired Button -->
         <button id="rcloud-btn" onclick="toggleRCloud()" class="w-full py-2.5 rounded-full bg-md-surfaceHigh text-md-primary font-medium text-sm md-transition active:scale-[0.98]">
           Ignite Drive
         </button>
@@ -119,7 +118,7 @@
             <p class="text-sm text-md-textMuted" id="mc-status">Bedrock Engine</p>
           </div>
         </div>
-        <button id="mc-btn" class="w-full py-2.5 rounded-full bg-md-surfaceHigh text-md-primary font-medium text-sm md-transition active:scale-[0.98]">
+        <button id="mc-btn" onclick="toggleMC()" class="w-full py-2.5 rounded-full bg-md-surfaceHigh text-md-primary font-medium text-sm md-transition active:scale-[0.98]">
           Initialize Server
         </button>
       </div>

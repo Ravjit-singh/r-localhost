@@ -2,32 +2,30 @@ import { spawn, ChildProcess } from 'child_process';
 import { logger } from '../../shared/logger.js';
 
 let mcProcess: ChildProcess | null = null;
-const MC_DIR = process.env.MC_DIR;
+const MC_DIR = process.env.MC_DIR || 'start-mc';
 
 export const mcManager = {
   start: (): boolean => {
     if (mcProcess) return false;
-    if (!MC_DIR) {
-      logger.error('MC_DIR not specified in .env', 'SERVER');
-      return false;
-    }
 
     try {
-      logger.info('Igniting Bedrock Server Core...', 'SERVER');
-      
-      mcProcess = spawn('./bedrock_server', {
-        cwd: MC_DIR,
-        shell: true
+      logger.info(`Igniting Container via [${MC_DIR}]...`, 'SERVER');
+
+      // Spawns start-mc directly.
+      // stdio: 'inherit' streams full Debian console logs into Master OS terminal.
+      mcProcess = spawn(MC_DIR, [], {
+        shell: true,
+        stdio: 'inherit'
       });
 
-      // Minimalist Clean Log
-      setTimeout(() => {
-        if (mcProcess) logger.success('Bedrock Server Online.', 'SERVER');
-      }, 1500);
+      mcProcess.on('close', (code) => {
+        logger.warn(`Container process exited with code ${code}`, 'SERVER');
+        mcProcess = null;
+      });
 
       return true;
     } catch (error) {
-      logger.error('Failed to boot Bedrock server', 'SERVER', error);
+      logger.error('Failed to trigger container startup script', 'SERVER', error);
       return false;
     }
   },
@@ -36,7 +34,7 @@ export const mcManager = {
     if (mcProcess) {
       mcProcess.kill('SIGINT');
       mcProcess = null;
-      logger.success('Bedrock server offline.', 'SERVER');
+      logger.success('Container connection terminated.', 'SERVER');
       return true;
     }
     return false;
